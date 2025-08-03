@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House Rent Receipt Generator</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for better aesthetics and print media */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .form-group label {
+            font-weight: 600;
+            color: #374151;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.625rem 1rem;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: #ffffff;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+            transform: translateY(-1px);
+        }
+        .receipt-preview {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .receipt-content {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+        .receipt-footer-layout {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            margin-top: 2rem;
+            position: relative;
+        }
+        .signature-section {
+            text-align: left;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .signature-text {
+            font-size: 0.875rem;
+            color: #4b5563;
+            margin-bottom: 5px;
+            position: relative;
+            width: 100%;
+        }
+        .signature-visuals {
+            position: relative;
+            width: 14rem;
+            height: 7rem;
+            margin-bottom: 5px;
+        }
+        .signature-line {
+            border-top: 1px solid #000;
+            width: 100%;
+            margin: 0;
+            padding-top: 5px;
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+        .revenue-stamp-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+        .revenue-stamp-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .revenue-stamp-container.hidden-stamp {
+            display: none !important;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+        input:checked + .slider:before {
+            -webkit-transform: translateX(16px);
+            -ms-transform: translateX(16px);
+            transform: translateX(16px);
+        }
+        .signature-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+        #loadingSpinner {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media print {
+            body {
+                background-color: #ffffff;
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .container {
+                box-shadow: none;
+                border: none;
+                margin: 0;
+                padding: 0;
+                max-width: 100%;
+            }
+            .receipt-preview {
+                border: none;
+                padding: 2rem;
+                min-height: auto;
+                background-color: #ffffff;
+            }
+            .receipt-footer-layout {
+                flex-direction: column;
+            }
+            .revenue-stamp-container.hidden-stamp {
+                display: none !important;
+            }
+            .signature-image:not(.hidden) + .signature-line {
+                display: none;
+            }
+            .signature-image.hidden + .signature-line {
+                display: block;
+            }
+        }
+        .receipt-header {
+            text-align: center;
+        }
+        .receipt-header h3 {
+            text-decoration: underline;
+        }
+        .message-box-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .message-box {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .message-box p {
+            margin-bottom: 15px;
+        }
+        .flex-row-responsive {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .flex-row-responsive > div {
+            flex: 1 1 45%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">House Rent Receipt Generator</h1>
+
+        <div class="grid grid-cols-1 gap-8">
+            <!-- Input Form Section -->
+            <div class="no-print">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Receipt Details</h2>
+                <form id="receiptForm" class="space-y-4">
+                    <!-- Employee Details -->
+                    <div class="form-group flex items-end gap-2">
+                        <div class="w-24">
+                            <label for="employeeTitle" class="block text-sm mb-1">Title:</label>
+                            <select id="employeeTitle" class="w-full">
+                                <option value="Mr">Mr</option>
+                                <option value="Ms">Ms</option>
+                                <option value="Mrs">Mrs</option>
+                            </select>
+                        </div>
+                        <div class="flex-grow">
+                            <label for="employeeName" class="block text-sm mb-1">Employee Name:</label>
+                            <input type="text" id="employeeName" placeholder="e.g., John Doe" class="w-full">
+                        </div>
+                    </div>
+                    <div class="flex-row-responsive">
+                        <div class="form-group">
+                            <label for="employeeNumber" class="block text-sm mb-1">Employee Number:</label>
+                            <input type="text" id="employeeNumber" placeholder="e.g., 12345">
+                        </div>
+                        <div class="form-group">
+                            <label for="workLocation" class="block text-sm mb-1">Work Location:</label>
+                            <input type="text" id="workLocation" placeholder="e.g., New Delhi">
+                        </div>
+                        <div class="form-group">
+                            <label for="residenceLocation" class="block text-sm mb-1">Residence Location:</label>
+                            <input type="text" id="residenceLocation" placeholder="e.g., Chennai">
+                        </div>
+                        <div class="form-group">
+                            <label for="employeePan" class="block text-sm mb-1">Employee PAN:</label>
+                            <input type="text" id="employeePan" placeholder="e.g., ABCDE1234F">
+                        </div>
+                    </div>
+                    <hr class="my-4">
+                    
+                    <!-- Rent & Landlord Details -->
+                    <div class="form-group">
+                        <label for="rentAmount" class="block text-sm mb-1">Rent Amount (Rs.):</label>
+                        <input type="number" id="rentAmount" step="0.01" placeholder="e.g., 15000.00" class="w-full">
+                    </div>
+                    
+                    <div class="flex-row-responsive">
+                        <div class="form-group">
+                            <label for="monthOfRent" class="block text-sm mb-1">For the month of:</label>
+                            <select id="monthOfRent" class="w-full">
+                                <option value="April">April</option>
+                                <option value="October">October</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="yearOfRent" class="block text-sm mb-1">For the year of:</label>
+                            <select id="yearOfRent" class="w-full"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="houseAddress" class="block text-sm mb-1">House Address:</label>
+                            <textarea id="houseAddress" rows="2" placeholder="e.g., 123 Main Street, Anytown" class="w-full"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="landlordName" class="block text-sm mb-1">Landlord Name:</label>
+                        <input type="text" id="landlordName" placeholder="e.g., John Smith" class="w-full">
+                    </div>
+                    <div class="form-group">
+                        <label for="landlordAddress" class="block text-sm mb-1">Landlord Address:</label>
+                        <textarea id="landlordAddress" rows="2" placeholder="e.g., 456 Oak Avenue, Anytown" class="w-full"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="landlordPan" class="block text-sm mb-1">PAN of Landlord:</label>
+                        <input type="text" id="landlordPan" placeholder="e.g., FGHIJ5678K" class="w-full">
+                    </div>
+                    
+                    <div class="flex-row-responsive">
+                        <div class="form-group">
+                            <label for="receiptDate" class="block text-sm mb-1">Date:</label>
+                            <input type="date" id="receiptDate" class="w-full">
+                        </div>
+                        <div class="form-group flex items-center justify-between mt-4">
+                            <label for="toggleRevenueStamp" class="block text-sm">Show Revenue Stamp:</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggleRevenueStamp" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label for="signatureUpload" class="block text-sm mb-1">Upload Landlord Signature (Image):</label>
+                        <input type="file" id="signatureUpload" accept="image/*" class="w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 mt-6">
+                        <button type="button" id="clearFormBtn" class="btn btn-secondary flex-grow">Clear Form</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Receipt Preview Section -->
+            <div>
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Receipt Preview</h2>
+                <div id="receiptPreview" class="receipt-preview text-gray-800">
+                    <div class="receipt-header text-center text-sm mb-4">
+                        <p class="font-bold underline">ANNEXURE I</p>
+                    </div>
+                    <div class="border border-gray-400 p-4 rounded-md">
+                        <div class="receipt-details text-sm mb-6 space-y-1">
+                            <p>EMPLOYEE NAME: <span id="previewEmployeeTitle"></span> <span id="previewEmployeeName">________________________________________</span></p>
+                            <p>EMPLOYEE NUMBER: <span id="previewEmployeeNumber">____________</span></p>
+                            <p>WORK LOCATION: <span id="previewWorkLocation">_________________________</span></p>
+                            <p>RESIDENCE LOCATION: <span id="previewResidenceLocation">_________________________</span></p>
+                            <p>EMPLOYEE PAN: <span id="previewEmployeePan">___________________</span></p>
+                        </div>
+
+                        <div class="text-center font-bold text-xl mb-4 underline">RENT RECEIPT</div>
+
+                        <div class="receipt-content">
+                            <p>Received a sum of Rs. <span id="previewRentAmount">-------------------</span> (<span id="previewAmountInWords">IN WORDS</span>) towards the rent for the month of <span id="previewMonthAndYear">_________________________</span> from <span id="previewEmployeeTitleAgain"></span> <span id="previewEmployeeNameAgain">________________________________________</span> who is residing at <span id="previewHouseAddress">__________________________________________________________________</span>.</p>
+                            <p>LANDLORD NAME: <span id="previewLandlordName">_________________________</span></p>
+                            <p>LANDLORD ADDRESS: <span id="previewLandlordAddress">__________________________________________________________________</span></p>
+                        </div>
+
+                        <div class="receipt-footer-layout flex flex-col items-start mt-auto">
+                            <p class="text-sm">(Affix Revenue Stamp of Rs.1/-) *</p>
+                            <div class="signature-visuals mt-2 relative w-56 h-28">
+                                <div class="revenue-stamp-container">
+                                    <img id="revenueStampImage" src="https://freeforonline.com/assets/images/driver-salary/revenu.webp" alt="Revenue Stamp" onerror="this.onerror=null;this.src='https://placehold.co/150x80/cccccc/333333?text=Revenue+Stamp+Image+Not+Found';">
+                                </div>
+                                <img id="signatureImagePreview" class="signature-image hidden" src="" alt="Landlord Signature">
+                                <div class="signature-line w-full" id="signatureLine"></div>
+                            </div>
+                            <div class="signature-text w-full">SIGNATURE OF THE OWNER</div>
+                            <p class="text-sm mt-2">PAN OF LANDLORD : <span id="previewLandlordPan">___________________</span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="no-print flex flex-col sm:flex-row gap-4 mt-6">
+                    <button type="button" id="printReceiptBtn" class="btn btn-primary flex-grow">Print Receipt</button>
+                    <button type="button" id="downloadPdfBtn" class="btn btn-primary flex-grow">Download PDF
+                        <div id="loadingSpinner" role="status"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        // Function to convert number to words (for Indian Rupees)
+        function convertNumberToWords(amount) {
+            const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const scales = ['', 'Thousand', 'Lakh', 'Crore'];
+
+            if (amount === 0) return 'Zero';
+
+            let num = amount.toString();
+            let [integerPart, decimalPart] = num.split('.');
+            let words = [];
+
+            function convertLessThanOneThousand(n) {
+                let s = [];
+                if (n >= 100) {
+                    s.push(units[Math.floor(n / 100)], 'Hundred');
+                    n %= 100;
+                }
+                if (n >= 20) {
+                    s.push(tens[Math.floor(n / 10)]);
+                    n %= 10;
+                }
+                if (n >= 10) {
+                    s.push(teens[n - 10]);
+                    n = 0;
+                }
+                if (n > 0) {
+                    s.push(units[n]);
+                }
+                return s.join(' ');
+            }
+
+            let i = 0;
+            while (integerPart.length > 0) {
+                let chunk;
+                if (i === 0) {
+                    chunk = parseInt(integerPart.slice(-3));
+                    integerPart = integerPart.slice(0, -3);
+                } else if (i >= 1) {
+                    if (integerPart.length > 2) {
+                        chunk = parseInt(integerPart.slice(-2));
+                        integerPart = integerPart.slice(0, -2);
+                    } else if (integerPart.length > 0) {
+                        chunk = parseInt(integerPart);
+                        integerPart = '';
+                    } else {
+                        break;
+                    }
+                }
+                if (chunk > 0) {
+                    let chunkWords = convertLessThanOneThousand(chunk);
+                    if (scales[i]) {
+                        words.unshift(chunkWords, scales[i]);
+                    } else {
+                        words.unshift(chunkWords);
+                    }
+                }
+                i++;
+            }
+
+            let finalWords = 'Rupees ' + words.join(' ') + (words.length > 0 ? ' ' : '');
+
+            if (decimalPart && parseInt(decimalPart) > 0) {
+                decimalPart = parseInt(decimalPart).toString().padEnd(2, '0');
+                const paise = parseInt(decimalPart);
+                if (paise > 0) {
+                    finalWords += 'and ' + convertLessThanOneThousand(paise) + ' Paise';
+                }
+            }
+            finalWords += ' Only';
+            return finalWords.trim();
+        }
+
+        // Helper function to show a custom message box
+        function showMessage(message) {
+            const overlay = document.createElement('div');
+            overlay.className = 'message-box-overlay';
+            overlay.innerHTML = `
+                <div class="message-box">
+                    <p>${message}</p>
+                    <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">OK</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        // Function to check if the form data is empty
+        function isFormDataEmpty() {
+            const employeeName = document.getElementById('employeeName').value.trim();
+            const rentAmount = parseFloat(document.getElementById('rentAmount').value);
+            const landlordName = document.getElementById('landlordName').value.trim();
+            const houseAddress = document.getElementById('houseAddress').value.trim();
+            const receiptDate = document.getElementById('receiptDate').value.trim();
+
+            return (
+                employeeName === '' &&
+                (isNaN(rentAmount) || rentAmount === 0) &&
+                landlordName === '' &&
+                houseAddress === '' &&
+                receiptDate === ''
+            );
+        }
+
+        // Event listener for DOM content loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('receiptDate').value = `${yyyy}-${mm}-${dd}`;
+            
+            // Populate the year dropdown
+            const yearOfRentDropdown = document.getElementById('yearOfRent');
+            for (let i = 2025; i <= 2035; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                yearOfRentDropdown.appendChild(option);
+            }
+            // Set the default value to the current year if it's within the range
+            if (yyyy >= 2025 && yyyy <= 2035) {
+                yearOfRentDropdown.value = yyyy;
+            }
+
+            const toggleRevenueStamp = document.getElementById('toggleRevenueStamp');
+            const revenueStampImage = document.getElementById('revenueStampImage');
+            if (toggleRevenueStamp.checked) {
+                revenueStampImage.classList.remove('hidden-stamp');
+            } else {
+                revenueStampImage.classList.add('hidden-stamp');
+            }
+            updateReceiptPreview();
+        });
+
+        // Get elements
+        const receiptForm = document.getElementById('receiptForm');
+        const clearFormBtn = document.getElementById('clearFormBtn');
+        const printReceiptBtn = document.getElementById('printReceiptBtn');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+        const receiptPreview = document.getElementById('receiptPreview');
+        const toggleRevenueStamp = document.getElementById('toggleRevenueStamp');
+        const revenueStampImage = document.getElementById('revenueStampImage');
+        const signatureUpload = document.getElementById('signatureUpload');
+        const signatureImagePreview = document.getElementById('signatureImagePreview');
+        const signatureLine = document.getElementById('signatureLine');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        // Function to update the receipt preview with form data
+        function updateReceiptPreview() {
+            const employeeTitle = document.getElementById('employeeTitle').value;
+            const employeeName = document.getElementById('employeeName').value || '________________________________________';
+            const employeeNumber = document.getElementById('employeeNumber').value || '____________';
+            const workLocation = document.getElementById('workLocation').value || '_________________________';
+            const residenceLocation = document.getElementById('residenceLocation').value || '_________________________';
+            const employeePan = document.getElementById('employeePan').value || '___________________';
+            const rentAmount = parseFloat(document.getElementById('rentAmount').value) || 0;
+            const monthOfRent = document.getElementById('monthOfRent').value;
+            const yearOfRent = document.getElementById('yearOfRent').value;
+            const houseAddress = document.getElementById('houseAddress').value || '__________________________________________________________________';
+            const landlordName = document.getElementById('landlordName').value || '_________________________';
+            const landlordAddress = document.getElementById('landlordAddress').value || '__________________________________________________________________';
+            const landlordPan = document.getElementById('landlordPan').value || '___________________';
+            
+            const amountInWords = convertNumberToWords(rentAmount);
+
+            // Update the preview with the title and name
+            document.getElementById('previewEmployeeTitle').textContent = employeeTitle + ' ';
+            document.getElementById('previewEmployeeName').textContent = employeeName;
+            document.getElementById('previewEmployeeTitleAgain').textContent = employeeTitle + ' ';
+            document.getElementById('previewEmployeeNameAgain').textContent = employeeName;
+            document.getElementById('previewEmployeeNumber').textContent = employeeNumber;
+            document.getElementById('previewWorkLocation').textContent = workLocation;
+            document.getElementById('previewResidenceLocation').textContent = residenceLocation;
+            document.getElementById('previewEmployeePan').textContent = employeePan;
+            document.getElementById('previewRentAmount').textContent = `Rs. ${rentAmount.toFixed(2)}`;
+            document.getElementById('previewAmountInWords').textContent = amountInWords;
+            
+            // Defensive check to avoid the error
+            const previewMonthAndYearEl = document.getElementById('previewMonthAndYear');
+            if (previewMonthAndYearEl) {
+                previewMonthAndYearEl.textContent = `${monthOfRent} ${yearOfRent}`;
+            }
+
+            document.getElementById('previewHouseAddress').textContent = houseAddress;
+            document.getElementById('previewLandlordName').textContent = landlordName;
+            document.getElementById('previewLandlordAddress').textContent = landlordAddress;
+            document.getElementById('previewLandlordPan').textContent = landlordPan;
+        }
+
+        // Event listener for clearing the form
+        clearFormBtn.addEventListener('click', function() {
+            receiptForm.reset();
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('receiptDate').value = `${yyyy}-${mm}-${dd}`;
+            
+            // Reset year dropdown to current year
+            const yearOfRentDropdown = document.getElementById('yearOfRent');
+            if (yyyy >= 2025 && yyyy <= 2035) {
+                yearOfRentDropdown.value = yyyy;
+            }
+
+            toggleRevenueStamp.checked = true;
+            revenueStampImage.classList.remove('hidden-stamp');
+
+            signatureUpload.value = '';
+            signatureImagePreview.src = '';
+            signatureImagePreview.classList.add('hidden');
+            signatureLine.classList.remove('hidden');
+            
+            updateReceiptPreview();
+        });
+
+        // Event listener for printing the receipt
+        printReceiptBtn.addEventListener('click', function() {
+            if (isFormDataEmpty()) {
+                showMessage("No data to download. Please fill in the receipt details first.");
+                return;
+            }
+            window.print();
+        });
+
+        // Event listener for downloading PDF with the new, more reliable method
+        downloadPdfBtn.addEventListener('click', async function() {
+            if (isFormDataEmpty()) {
+                showMessage("No data to download. Please fill in the receipt details first.");
+                return;
+            }
+
+            loadingSpinner.style.display = 'block';
+            downloadPdfBtn.disabled = true;
+
+            try {
+                const canvas = await html2canvas(receiptPreview, { scale: window.devicePixelRatio, useCORS: true });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210;
+                const pageHeight = 295;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+
+                let position;
+                if (imgHeight < pageHeight) {
+                    position = (pageHeight - imgHeight) / 2;
+                } else {
+                    position = 0;
+                }
+
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= (pageHeight - position);
+
+                while (heightLeft >= 0) {
+                    pdf.addPage();
+                    position = heightLeft > pageHeight ? 0 : pageHeight - imgHeight + heightLeft;
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                pdf.save(`house_rent_receipt.pdf`);
+            } catch (err) {
+                console.error('Error during PDF generation:', err);
+                showMessage("PDF generation failed. This might be due to a problem with an image file. Please try again.");
+            } finally {
+                loadingSpinner.style.display = 'none';
+                downloadPdfBtn.disabled = false;
+            }
+        });
+
+        // Event listener for the toggle switch
+        toggleRevenueStamp.addEventListener('change', function() {
+            if (this.checked) {
+                revenueStampImage.classList.remove('hidden-stamp');
+            } else {
+                revenueStampImage.classList.add('hidden-stamp');
+            }
+        });
+
+        // Event listener for signature image upload with error handling
+        signatureUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    signatureImagePreview.src = e.target.result;
+                    signatureImagePreview.classList.remove('hidden');
+                    signatureLine.classList.add('hidden');
+                };
+                reader.onerror = function(e) {
+                    console.error('Error reading the file:', e);
+                    const errorMessage = "Could not read the uploaded signature file.";
+                    showMessage(errorMessage);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                signatureImagePreview.src = '';
+                signatureImagePreview.classList.add('hidden');
+                signatureLine.classList.remove('hidden');
+            }
+        });
+
+        // Add input listeners to update preview dynamically
+        const formInputs = receiptForm.querySelectorAll('input:not([type="file"]), textarea, select');
+        formInputs.forEach(input => {
+            input.addEventListener('input', updateReceiptPreview);
+        });
+    </script>
+</body>
+</html>
